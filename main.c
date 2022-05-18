@@ -1,49 +1,105 @@
 #include "shell.h"
 
-/**
- * main - Simple shell
- * @ac: number of args
- * @argv: args vector
- * Return: 0;
- */
-int main(int ac, char **argv)
-{
-	arguments_t arguments;
+static char *FIRST_ARG;
 
-	arguments.ac = ac;
-	arguments.argv = argv[0];
-	initialize_struct(&arguments);
-	signal(SIGINT, signal_handler);
-	_shell(&arguments);
-	return (0);
+int handle_arguments(int ac, char **av, int *exec_file);
+void sigintHandler(int sig_num);
+char *get_first_av();
+
+/**
+ * main - Entry point
+ * @ac: number of arguments
+ * @av: Array of arguments
+ *
+ * Return: 0 on success
+*/
+int main(int ac, char **av)
+{
+	int read, exec_file = 0;
+	char *buff = NULL;
+	size_t buff_len = 0;
+	int fd;
+
+	FIRST_ARG = av[0];
+
+	signal(SIGINT, sigintHandler);
+	fd = handle_arguments(ac, av, &exec_file);
+	/*update_count_lines();*/
+
+	while (1)
+	{
+		/* Print console symbol only if it is interactive*/
+		if (isatty(STDIN_FILENO) == 1 && exec_file == 0)
+			write(STDOUT_FILENO, "$ ", 2);
+		/* Read commands from console */
+		/*read = read_line(fd, &buff);*/
+		read = getline(&buff, &buff_len, stdin);
+		if (read == EOF)
+		{
+			free(buff);
+			exit(*process_exit_code());
+		}
+		/*handle_history(buff);*/
+		/* Remove comments & '\n' char from buffer */
+		buff = handle_comment(buff);
+		_strtok(buff, "\n");
+		/* Handling_semicolon, ||, && and executes inside of the function */
+		handling_semicolon_and_operators(buff, read, av[0]);
+	}
+	/* Free buffer memory */
+	free(buff);
+	if (exec_file)
+		close(fd);
+	return (*process_exit_code());
 }
 
 /**
- * initialize_struct - Simple shell
- * @arguments: args
- */
-void initialize_struct(arguments_t *arguments __attribute__((unused)))
+ * handle_arguments - Check the number of arguments passed to main
+ * @ac: Number of arguments
+ * @av: Array of arguments as strings
+ * @exec_file: Integer used to check if user wants to exec commands from file
+ *
+ * Return: File descriptor to file
+*/
+int handle_arguments(int ac, char **av, int *exec_file)
 {
-	arguments->buf = NULL;
-	arguments->arr = NULL;
-	arguments->count = 0;
-	arguments->head = arrtol();
-	arguments->exit_status = 0;
+	int fd = STDIN_FILENO;
+	char *err_msg = "Error: more than one argument\n";
+
+	if (ac > 2)
+	{
+		write(STDERR_FILENO, err_msg, _strlen(err_msg));
+		exit(1);
+	}
+	if (ac == 2)
+	{
+		fd = open(av[1], O_RDONLY);
+		*exec_file = 1;
+	}
+	if (fd == -1)
+	{
+		perror(av[0]);
+		exit(1);
+	}
+
+	return (fd);
 }
 
 /**
- * _exit_status - exit status
- * Return: Exit number
- */
-int _exit_status(void)
+ * sigintHandler - Avoids current process to finish
+ * @sig_num: Signal number
+*/
+void sigintHandler(int __attribute__((unused))sig_num)
 {
-	int number = 0;
+	write(STDIN_FILENO, "\n$ ", 3);
+}
 
-	/* if (errno == ILLNUM || errno == NOTDIR) */
-	/* number = 2; */
-	if (errno == EACCES)
-		number = 126;
-	else if (errno == ENOTDIR || errno == ENOENT)
-		number = 127;
-	return (number);
+/**
+ * get_first_av - Returns the first argument passed to main
+ *
+ * Return: Pointer to first arg passed to main
+*/
+char *get_first_av(void)
+{
+	return (FIRST_ARG);
 }
