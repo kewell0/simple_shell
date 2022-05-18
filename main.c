@@ -24,18 +24,11 @@ int main(int ac, char **argv)
  */
 void initialize_struct(arguments_t *arguments __attribute__((unused)))
 {
-	/* char buf[PATH_MAX] = {0}; */
-	/* char *cwd = getcwd(cwd = NULL, 0); */
-
 	arguments->buf = NULL;
 	arguments->arr = NULL;
 	arguments->count = 0;
 	arguments->head = arrtol();
 	arguments->exit_status = 0;
-	/* _strcat(buf, "OLDPWD="); */
-	/* _strcat(buf, cwd); */
-	/* add_node_end(&arguments->head, buf); */
-	/* free(cwd); */
 }
 
 /**
